@@ -89,18 +89,13 @@ def get_run_onnx(onnx_model):
       elif n.op_type == "Constant": ret = opt['value']
       elif n.op_type == "Reshape": ret = inp[0].reshape([int(x) for x in inp[1].numpy()])
       elif n.op_type == "Gather":
-        # FIXME use slice
+        # TODO: is this correct? seems to work for simple gather ops
         axis = opt['axis']
         shape = list(inp[0].shape)
         indices = [shape[axis]+int(x) if x<0 else int(x) for x in inp[1].numpy()]
-        if len(indices)>1:
-          shape[axis] = 1
-        else:
-          shape.pop(axis)
-        if axis==1:
-          ret = inp[0][:,indices[0]].reshape(shape).cat(*[inp[0][:,x].reshape(shape) for x in indices[1:]], dim=axis)
-        elif axis==0:
-          ret = inp[0][indices[0]].reshape(shape).cat(*[inp[0][x].reshape(shape) for x in indices[1:]], dim=axis)
+        args = [[(0,x) if j != axis else (i,i+1) for j, x in enumerate(shape)] for i in indices]
+        ret = inp[0].slice(arg=args[0]).cat(*[inp[0].slice(arg=arg) for arg in args[1:]], dim=axis)
+        ret = ret.reshape([s for i,s in enumerate(shape) if i != axis]) if len(indices) == 1 else ret # squeeze if needed
       elif n.op_type == "BatchNormalization":
         invstd = inp[4].add(opt.get('epsilon', 1e-5))**-0.5
         ret = batch_normalize(inp[0], inp[1], inp[2], inp[3], invstd)
