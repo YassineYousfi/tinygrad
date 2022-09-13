@@ -152,7 +152,7 @@ def get_run_onnx(onnx_model):
         axis, starts, ends  = int(axes.numpy()[0]), int(starts.numpy()[0]), int(ends.numpy()[0])
         ends = min(ends, inp[0].shape[axis])
         starts = starts + inp[0].shape[axis] if starts < 0 else starts
-        arg[axes[0]] = (starts, ends)
+        arg[axis] = (starts, ends)
         ret = inp[0].slice(arg=arg)
       else:
         print("UNSUPPORTED", n.op_type, n.input, n.output)
