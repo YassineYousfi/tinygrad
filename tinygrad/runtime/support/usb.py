@@ -114,7 +114,9 @@ class USB3:
 
   def bulk_wait(self, tag:int):
     """Block until the tagged transfer completes; raises if any async transfer failed."""
-    while tag in self._async_pending: checked(libusb.libusb_handle_events)(None)
+    while tag in self._async_pending:
+      if (rc:=libusb.libusb_handle_events(None)) < 0 and rc != libusb.LIBUSB_ERROR_INTERRUPTED:
+        raise RuntimeError(f"libusb_handle_events: {ctypes.string_at(libusb.libusb_strerror(rc)).decode()}")
     if self._async_err: raise RuntimeError(f"async bulk OUT failed: status={self._async_err}")
 
   def bulk_read(self, length:int, timeout:int=1000) -> memoryview:
